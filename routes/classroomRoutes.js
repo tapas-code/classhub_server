@@ -5,6 +5,9 @@ const {
   assignTeacher,
   assignStudents,
   getAllClassrooms,
+  getClassroomById,
+  getAvailableTeachers,
+  getAvailableStudents,
 } = require("../controllers/classroomController");
 
 const router = express.Router();
@@ -32,5 +35,16 @@ router.get(
   authMiddleware(["Principal", "Teacher", "Student"]),
   getAllClassrooms
 );
+
+// Route to get a specific classroom by ID (Principal, Teacher, or Student)
+router.get(
+  "/get-classroom/:id",
+  authMiddleware(["Principal", "Teacher", "Student"]),
+  getClassroomById
+);
+
+router.get('/available-teachers', authMiddleware(['Principal']), getAvailableTeachers);
+router.get('/available-students', authMiddleware(['Principal']), getAvailableStudents);
+
 
 module.exports = router;

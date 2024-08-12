@@ -114,9 +114,70 @@ const getAllClassrooms = async (req, res) => {
   }
 };
 
+const getClassroomById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const classroom = await Classroom.findById(id).populate(
+      "teacher students",
+      "username userImg email role"
+    );
+    if (!classroom) {
+      return res.status(404).json({ message: "Classroom not found" });
+    }
+    res.status(200).json({
+      message: "Classroom retrieved successfully",
+      classroom,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Fetch available teachers (those not assigned to a classroom)
+const getAvailableTeachers = async (req, res) => {
+  try {
+    const availableTeachers = await User.find({
+      role: "Teacher",
+      $or: [{ classroom: { $exists: false } }, { classroom: null }],
+    });
+
+    res.status(200).json({ teachers: availableTeachers });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const getAvailableStudents = async (req, res) => {
+  try {
+    const { classroomId } = req.query; // Get classroomId from query parameters
+
+    // Find the classroom to get assigned students
+    const classroom = await Classroom.findById(classroomId).select('students');
+    if (!classroom) {
+      return res.status(404).json({ message: "Classroom not found" });
+    }
+
+    // Get the list of student IDs already assigned to this classroom
+    const assignedStudentIds = classroom.students.map(student => student.toString());
+
+    // Find all students who are not assigned to this classroom
+    const availableStudents = await User.find({
+      role: "Student",
+      _id: { $nin: assignedStudentIds } // Exclude students who are already assigned
+    });
+
+    res.status(200).json({ students: availableStudents });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   createClassroom,
   assignTeacher,
   assignStudents,
   getAllClassrooms,
+  getClassroomById,
+  getAvailableTeachers,
+  getAvailableStudents,
 };
