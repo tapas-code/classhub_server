@@ -4,7 +4,7 @@ const User = require("../models/User");
 // Create a new classroom
 const createClassroom = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, teacherId, studentIds } = req.body;
 
     // Check if the classroom already exists
     const existingClassroom = await Classroom.findOne({ name });
@@ -13,16 +13,37 @@ const createClassroom = async (req, res) => {
     }
 
     // Create the new classroom
-    const newClassroom = await Classroom.create({ name });
+    const newClassroom = await Classroom.create({ name, teacher: teacherId, students: studentIds });
+
+    // Update the teacher's classroom field
+    if (teacherId) {
+      await User.findByIdAndUpdate(teacherId, { classroom: newClassroom._id });
+    }
+
+    // Update each student's classroom field
+    if (studentIds.length > 0) {
+      await User.updateMany(
+        { _id: { $in: studentIds } },
+        { $set: { classroom: newClassroom._id } }
+      );
+    }
+
+    // Fetch and populate the new classroom details
+    const populatedClassroom = await Classroom.findById(newClassroom._id)
+      .populate('teacher')
+      .populate('students');
 
     res.status(201).json({
       message: "Classroom created successfully",
-      classroom: newClassroom,
+      classroom: populatedClassroom,
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
+
 
 // Assign a teacher to a classroom
 const assignTeacher = async (req, res) => {
